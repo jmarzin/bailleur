@@ -24,8 +24,8 @@ class bailleurApp$Test extends org.scalatest.FunSpec with Matchers {
     }
 
     it("traite les formules n à m") {
-      "Henri Tagnères (rue) (1 à 65)".nomVoie should be("rue Henri Tagnères",Range(1,66,2).toList.sorted)
-      "Henri Tagnères (rue) (2 à 12)".nomVoie should be("rue Henri Tagnères",Range(2,13,2).toList.sorted)
+      "Henri Tagnères (rue) (1 à 65)".nomVoie should be("rue Henri Tagnères",(1 to 65 by 2).toList.sorted)
+      "Henri Tagnères (rue) (2 à 12)".nomVoie should be("rue Henri Tagnères",(2 to 12 by 2).toList.sorted)
     }
 
     it("traite les formules n à la fin") {
@@ -33,15 +33,15 @@ class bailleurApp$Test extends org.scalatest.FunSpec with Matchers {
     }
 
     it("traite les formules pairs et impairs") {
-      "Henri Tagnères (rue) (pairs)".nomVoie should be("rue Henri Tagnères",Range(2,10001,2).toList.sorted)
-      "Henri Tagnères (rue) (Pairs)".nomVoie should be("rue Henri Tagnères",Range(2,10001,2).toList.sorted)
-      "Henri Tagnères (rue) (impairs)".nomVoie should be("rue Henri Tagnères",Range(1,10001,2).toList.sorted)
-      "Henri Tagnères (rue) (Impairs)".nomVoie should be("rue Henri Tagnères",Range(1,10001,2).toList.sorted)
+      "Henri Tagnères (rue) (pairs)".nomVoie should be("rue Henri Tagnères",(2 to 10000 by 2).toList.sorted)
+      "Henri Tagnères (rue) (Pairs)".nomVoie should be("rue Henri Tagnères",(2 to 10000 by 2).toList.sorted)
+      "Henri Tagnères (rue) (impairs)".nomVoie should be("rue Henri Tagnères",(1 to 10000 by 2).toList.sorted)
+      "Henri Tagnères (rue) (Impairs)".nomVoie should be("rue Henri Tagnères",(1 to 10000 by 2).toList.sorted)
     }
 
     it("traite les jonctions par et") {
-      "Henri Tagnères (rue) (pairs et impairs)".nomVoie should be("rue Henri Tagnères",Range(1,10001).toList.sorted)
-      "Henri Tagnères (rue) (1 à 11 et 2 à 8)".nomVoie should be("rue Henri Tagnères",List(1,2,3,4,5,6,7,8,9,11))
+      "Henri Tagnères (rue) (pairs et impairs)".nomVoie should be("rue Henri Tagnères",(2 to 10000 by 2).toStream.append((1 to 10000 by 2).toStream))
+      "Henri Tagnères (rue) (1 à 11 et 2 à 8)".nomVoie should be("rue Henri Tagnères",(1 to 11 by 2).toStream.append((2 to 8 by 2).toStream))
     }
   }
 }

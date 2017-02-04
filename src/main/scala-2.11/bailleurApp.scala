@@ -11,23 +11,23 @@ object bailleurApp extends App {
     override val delimiter = '|'
   }
   implicit class Voie(s: String) {
-    def nomVoie : (String,List[Int]) = {
+    def nomVoie : (String,Stream[Int]) = {
       val debutNom = s.indexOf("(")
-      if (debutNom < 0) return (s,List())
+      if (debutNom < 0) return (s,Stream())
       val finNom = if (s.indexOf(")") < 0) s.length else s.indexOf(")")
       val rue = s.substring(debutNom + 1, finNom) + " " + s.substring(0, debutNom - 1) + (if(finNom == s.length) "" else s.substring(finNom + 1))
       val debut2 = rue.indexOf("(")
-      if(debut2 < 0) return (rue, List())
+      if(debut2 < 0) return (rue, Stream())
       val fin2 = if (rue.indexOf(")") < 0) rue.length else rue.indexOf(")")
       val intervalle = if (fin2 == debut2 + 1) "" else rue.substring(debut2 + 1, fin2)
-      if (intervalle == "") return (rue.substring(0,debut2-1), List())
+      if (intervalle == "") return (rue.substring(0,debut2-1), Stream())
       val conditions = intervalle.split(" et ")
-      var ensemble: Set[Int] = Set()
+      var ensemble: Stream[Int] = Stream()
       for(cond<-conditions) {
         val pattern1 = """(\d+) à la fin""".r
         try {
           val pattern1(debut) = cond.trim
-          ensemble = ensemble.union(Range(debut.toInt, 10001, 2).toSet)
+          ensemble = ensemble.append((debut.toInt to 10000 by 2).toStream)
         }
         catch {
           case _: Throwable =>
@@ -35,19 +35,19 @@ object bailleurApp extends App {
         val pattern2 = """(\d+) à (\d+)""".r
         try {
           val pattern2(debut, fin) = cond.trim
-          ensemble = ensemble.union(Range(debut.toInt, fin.toInt + 1, 2).toSet)
+          ensemble = ensemble.append((debut.toInt to fin.toInt by 2).toStream)
         }
         catch {
           case _: Throwable =>
         }
         if (cond.trim.matches("[Ii]mpairs")) {
-          ensemble = ensemble.union(Range(1, 10001, 2).toSet)
+          ensemble = ensemble.append((1 to 10000 by  2).toStream)
         }
         if (cond.trim.matches("[Pp]airs")) {
-          ensemble = ensemble.union(Range(2, 10001, 2).toSet)
+          ensemble = ensemble.append((2 to 10000 by 2).toStream)
         }
       }
-      (rue.substring(0,debut2-1), ensemble.toList.sorted)
+      (rue.substring(0,debut2-1), ensemble)
     }
   }
 
@@ -79,7 +79,7 @@ object bailleurApp extends App {
   val readerRuesToulouse = CSVReader.open(new File("RUES DE TOULOUSE.csv"))
   val rues = readerRuesToulouse.all()
 
-  var tableRues: scala.collection.mutable.Map[String, List[(String,List[Int])]] = _
+  var tableRues: scala.collection.mutable.Map[String, List[(String,Stream[Int])]] = _
 
   for(i<- 1 until rues.size) {
     val rue = rues(i)(1).nomVoie
