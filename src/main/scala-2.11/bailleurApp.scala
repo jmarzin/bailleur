@@ -118,7 +118,7 @@ object bailleurApp extends App {
     } else {
       bailleurBuf(i) += tableSip.getOrElse(comm,
         tableSip.getOrElse(comm.replaceFirst("ST ", "SAINT-"),
-          tableSip.getOrElse(comm.replaceFirst(" FONSEGRIVES", ""), "")))
+          tableSip.getOrElse(comm.replaceFirst(" FONSEGRIVES", ""), "communeInconnue")))
     }
   }
   val entete = bailleurBuf.head

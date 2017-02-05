@@ -1,0 +1,27 @@
+Cet utilitaire ajoute le code du SIP au fichier du bailleur et éclate ce dernier par SIP.
+Il utilise des fichiers CSV avec le caractère | comme seul séparateur (pas de séparateur "" pour les chaînes de caractères).
+
+Mettre les fichiers suivants dans le même répertoire :
+- bailleur.jar : cet utilitaire
+- communes.csv : le fichier des communes du département
+- RUES DE TOULOUSE.csv : le fichier des rues de Toulouse
+- bailleur.csv : le fichier du bailleur mis aux normes.
+
+Lancer le traitement en double-cliquant sur bailleur.jar
+
+Le traitement crée un fichier .csv par SIP nommé bailleur_complete_xx.csv où xx est le code du SIP.
+Les lignes en erreur sont placées dans 2 fichiers :
+    - bailleur_complete_communeInconnue.csv : la commune n'a pas été trouvée dans communes.csv
+    - bailleur_complete_rueInconnue.csv     : la rue n'a pas été trouvée dans RUES DE TOULOUSE.csv
+    - bailleur_complete_aLaMain             : la rue a bien été trouvée, mais la règle des numéros n'a pas pu être interprétée
+Concernant les règles sur les numéros, le traitement comprend les séquences suivantes :
+    - (n à m)           : les chaînes "pairs" ou "impairs" sont ignorées, la valeur de n étant seule considérée
+    - (n à la fin)
+    - (pairs) ou (Pairs)
+    - (impairs) ou (Impairs)
+    - toute combinaison des règles précédentes séparées par " et "
+Seuls les numéros strictement numériques sont pris en charge. (4000A à la fin) ne sera pas reconnue et devra être corrigée à la main.
+Pour corriger les erreurs, vous pouvez :
+    - les identifier dans le fichier détaillé, les corriger dans les fichiers d'origine, supprimer tous les fichiers ...complete...csv
+    - les corriger dans le fichier détaillé directement si elles sont peu nombreuses.
+
