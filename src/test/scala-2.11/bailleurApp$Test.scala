@@ -24,19 +24,20 @@ class bailleurApp$Test extends org.scalatest.FunSpec with Matchers {
     }
 
     it("traite les formules n à m") {
-      "Henri Tagnères (rue) (1 à 65)".nomVoie should be("rue Henri Tagnères",(1 to 65 by 2).toList.sorted)
-      "Henri Tagnères (rue) (2 à 12)".nomVoie should be("rue Henri Tagnères",(2 to 12 by 2).toList.sorted)
+      "Henri Tagnères (rue) (1 à 65)".nomVoie should be("rue Henri Tagnères",(1 to 65 by 2).toStream)
+      "Henri Tagnères (rue) (Impairs 1 à 65)".nomVoie should be("rue Henri Tagnères",(1 to 65 by 2).toStream)
+      "Henri Tagnères (rue) (2 à 12)".nomVoie should be("rue Henri Tagnères",(2 to 12 by 2).toStream)
     }
 
     it("traite les formules n à la fin") {
-      "Henri Tagnères (rue) (1 à la fin)".nomVoie should be("rue Henri Tagnères",Range(1,10001,2).toList.sorted)
+      "Henri Tagnères (rue) (1 à la fin)".nomVoie should be("rue Henri Tagnères",Range(1,10000,2).toStream)
     }
 
     it("traite les formules pairs et impairs") {
-      "Henri Tagnères (rue) (pairs)".nomVoie should be("rue Henri Tagnères",(2 to 10000 by 2).toList.sorted)
-      "Henri Tagnères (rue) (Pairs)".nomVoie should be("rue Henri Tagnères",(2 to 10000 by 2).toList.sorted)
-      "Henri Tagnères (rue) (impairs)".nomVoie should be("rue Henri Tagnères",(1 to 10000 by 2).toList.sorted)
-      "Henri Tagnères (rue) (Impairs)".nomVoie should be("rue Henri Tagnères",(1 to 10000 by 2).toList.sorted)
+      "Henri Tagnères (rue) (pairs)".nomVoie should be("rue Henri Tagnères",(2 to 10000 by 2).toStream)
+      "Henri Tagnères (rue) (Pairs)".nomVoie should be("rue Henri Tagnères",(2 to 10000 by 2).toStream)
+      "Henri Tagnères (rue) (impairs)".nomVoie should be("rue Henri Tagnères",(1 to 10000 by 2).toStream)
+      "Henri Tagnères (rue) (Impairs)".nomVoie should be("rue Henri Tagnères",(1 to 10000 by 2).toStream)
     }
 
     it("traite les jonctions par et") {

@@ -23,42 +23,20 @@ object bailleurApp extends App {
       if (intervalle == "") return (rue.substring(0,debut2-1), Stream())
       val conditions = intervalle.split(" et ")
       var ensemble: Stream[Int] = Stream()
-      val pattern1 = """.*(\d+) à la fin""".r
-      val pattern2 = """.*(\d+) à (\d+)""".r
-      val pattern3 = """([Ii]mpairs)""".r
-      val pattern4 = """([Pp]airs)""".r
+      val nAfin = """.*(\d+) à la fin""".r
+      val nAm = """.*(\d+) à (\d+)""".r
+      val impairs = """([Ii]mpairs)""".r
+      val pairs = """([Pp]airs)""".r
 
       for(cond<-conditions) {
-        cond match {
-          case pattern1(debut) => ensemble = ensemble.append((debut.toInt to 10000 by 2).toStream)
-          case pattern2(debut,fin) => ensemble = ensemble.append((debut.toInt to fin.toInt by 2).toStream)
-          case pattern3(_) => ensemble = ensemble.append((1 to 10000 by 2).toStream)
-          case pattern4(_) => ensemble = ensemble.append((2 to 10000 by  2).toStream)
-          case _ =>   
-        }
 
-//        val pattern1 = (\d+) à la fin.r
-//        try {
-//          val pattern1(debut) = cond.trim
-//          ensemble = ensemble.append((debut.toInt to 10000 by 2).toStream)
-//        }
-//        catch {
-//          case _: Throwable =>
-//        }
-//        val pattern2 = """(\d+) à (\d+)""".r
-//        try {
-//          val pattern2(debut, fin) = cond.trim
-//          ensemble = ensemble.append((debut.toInt to fin.toInt by 2).toStream)
-//        }
-//        catch {
-//          case _: Throwable =>
-//        }
-//        if (cond.trim.matches("[Ii]mpairs")) {
-//          ensemble = ensemble.append((1 to 10000 by  2).toStream)
-//        }
-//        if (cond.trim.matches("[Pp]airs")) {
-//          ensemble = ensemble.append((2 to 10000 by 2).toStream)
-//        }
+        cond match {
+          case nAfin(debut) => ensemble = ensemble.append((debut.toInt to 10000 by 2).toStream)
+          case nAm(debut,fin) => ensemble = ensemble.append((debut.toInt to fin.toInt by 2).toStream)
+          case impairs(_) => ensemble = ensemble.append((1 to 10000 by 2).toStream)
+          case pairs(_) => ensemble = ensemble.append((2 to 10000 by  2).toStream)
+          case _ =>
+        }
       }
       (rue.substring(0,debut2-1), ensemble)
     }
@@ -143,6 +121,19 @@ object bailleurApp extends App {
           tableSip.getOrElse(comm.replaceFirst(" FONSEGRIVES", ""), "")))
     }
   }
-  val writerBailleur = CSVWriter.open(new File("bailleur_complete.csv"))
-  writerBailleur.writeAll(bailleurBuf)
+  val entete = bailleurBuf.head
+  val indexSipBailleur = entete.indexOf("SIP")
+  val corps = bailleurBuf.tail.sortWith(_ (indexSipBailleur)< _(indexSipBailleur))
+  var sip = ""
+  var writerBailleur: CSVWriter = _
+  for(ligne<-corps) {
+    if(ligne(indexSipBailleur)!=sip) {
+      if(writerBailleur != null) writerBailleur.close()
+      sip = ligne(indexSipBailleur)
+      writerBailleur = CSVWriter.open(new File("bailleur_complete_" + sip +".csv"))
+      writerBailleur.writeRow(entete)
+    }
+    writerBailleur.writeRow(ligne)
+  }
+  writerBailleur.close()
 }
