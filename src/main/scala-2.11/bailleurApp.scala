@@ -53,6 +53,7 @@ object bailleurApp extends App {
     println("le fichier est déjà traité")
     System.exit(-1)
   }
+  //noinspection ZeroIndexToHead
   bailleurBuf(0) += "SIP"
 
   val indexCommuneBailleur = bailleurBuf.head.indexOf("COMMUNE")
@@ -93,16 +94,15 @@ object bailleurApp extends App {
       var rueTrouvee = false
       var irue = 0
       do {
-        var rueTable = tableRues.get(bailleurBuf(i)(indexRue).replaceFirst(subst(irue)._1, subst(irue)._2))
+        val rueTable = tableRues.get(bailleurBuf(i)(indexRue).replaceFirst(subst(irue)._1, subst(irue)._2))
         if (rueTable.isDefined) {
           val rueRef = rueTable.get
           if (rueRef.size == 1) {
             bailleurBuf(i) += rueRef.head._1
           } else {
-            val numero = bailleurBuf(i)(indexRue - 1)
             val rueRefs = rueRef.filter(_._2.contains(bailleurBuf(i)(indexRue - 1).toInt))
             if(rueRefs.isEmpty) {
-              bailleurBuf(i) += "à traiter à la main"
+              bailleurBuf(i) += "aLaMain"
             } else {
               bailleurBuf(i) += rueRefs.head._1
             }
@@ -113,7 +113,7 @@ object bailleurApp extends App {
         }
       } while (!rueTrouvee && irue < subst.size)
       if(!rueTrouvee) {
-        bailleurBuf(i) += "rue non trouvée"
+        bailleurBuf(i) += "rueInconnue"
       }
     } else {
       bailleurBuf(i) += tableSip.getOrElse(comm,
