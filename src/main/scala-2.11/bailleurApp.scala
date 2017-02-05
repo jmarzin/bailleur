@@ -23,29 +23,42 @@ object bailleurApp extends App {
       if (intervalle == "") return (rue.substring(0,debut2-1), Stream())
       val conditions = intervalle.split(" et ")
       var ensemble: Stream[Int] = Stream()
+      val pattern1 = """.*(\d+) à la fin""".r
+      val pattern2 = """.*(\d+) à (\d+)""".r
+      val pattern3 = """([Ii]mpairs)""".r
+      val pattern4 = """([Pp]airs)""".r
+
       for(cond<-conditions) {
-        val pattern1 = """(\d+) à la fin""".r
-        try {
-          val pattern1(debut) = cond.trim
-          ensemble = ensemble.append((debut.toInt to 10000 by 2).toStream)
+        cond match {
+          case pattern1(debut) => ensemble = ensemble.append((debut.toInt to 10000 by 2).toStream)
+          case pattern2(debut,fin) => ensemble = ensemble.append((debut.toInt to fin.toInt by 2).toStream)
+          case pattern3(_) => ensemble = ensemble.append((1 to 10000 by 2).toStream)
+          case pattern4(_) => ensemble = ensemble.append((2 to 10000 by  2).toStream)
+          case _ =>   
         }
-        catch {
-          case _: Throwable =>
-        }
-        val pattern2 = """(\d+) à (\d+)""".r
-        try {
-          val pattern2(debut, fin) = cond.trim
-          ensemble = ensemble.append((debut.toInt to fin.toInt by 2).toStream)
-        }
-        catch {
-          case _: Throwable =>
-        }
-        if (cond.trim.matches("[Ii]mpairs")) {
-          ensemble = ensemble.append((1 to 10000 by  2).toStream)
-        }
-        if (cond.trim.matches("[Pp]airs")) {
-          ensemble = ensemble.append((2 to 10000 by 2).toStream)
-        }
+
+//        val pattern1 = (\d+) à la fin.r
+//        try {
+//          val pattern1(debut) = cond.trim
+//          ensemble = ensemble.append((debut.toInt to 10000 by 2).toStream)
+//        }
+//        catch {
+//          case _: Throwable =>
+//        }
+//        val pattern2 = """(\d+) à (\d+)""".r
+//        try {
+//          val pattern2(debut, fin) = cond.trim
+//          ensemble = ensemble.append((debut.toInt to fin.toInt by 2).toStream)
+//        }
+//        catch {
+//          case _: Throwable =>
+//        }
+//        if (cond.trim.matches("[Ii]mpairs")) {
+//          ensemble = ensemble.append((1 to 10000 by  2).toStream)
+//        }
+//        if (cond.trim.matches("[Pp]airs")) {
+//          ensemble = ensemble.append((2 to 10000 by 2).toStream)
+//        }
       }
       (rue.substring(0,debut2-1), ensemble)
     }
