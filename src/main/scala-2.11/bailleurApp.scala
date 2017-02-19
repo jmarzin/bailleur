@@ -1,6 +1,9 @@
 import java.io.{File, PrintWriter}
 import javax.swing.filechooser.FileNameExtensionFilter
+
 import com.github.tototoshi.csv.{CSVReader, CSVWriter, DefaultCSVFormat}
+
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 import scala.swing.Dialog.Message
@@ -33,7 +36,6 @@ object bailleurApp extends App {
       val pairs = """([Pp]airs)""".r
 
       for(cond<-conditions) {
-
         cond match {
           case nAfin(debut) => ensemble = ensemble.append((debut.toInt to 10000 by 2).toStream)
           case nAm(debut,fin) => ensemble = ensemble.append((debut.toInt to fin.toInt by 2).toStream)
@@ -45,6 +47,17 @@ object bailleurApp extends App {
       (rue.substring(0,debut2-1).trim, ensemble)
     }
   }
+
+  def litFichier(i :Int, titre: String): (List[List[String]],Option[File]) = {
+    val fichier = if (listeFichiers.isEmpty)
+      choosePlainFile("Fichier " + titre)
+    else
+      Some(new File(listeFichiers(i)))
+    if (fichier.isEmpty) System.exit(-1)
+    val reader = CSVReader.open(fichier.get)
+    (reader.all(),fichier)
+  }
+
   def choosePlainFile(title: String = ""): Option[File] = {
     val filter = new FileNameExtensionFilter("Fichier csv","csv")
     val chooser = new FileChooser(new File("."))
@@ -54,60 +67,60 @@ object bailleurApp extends App {
     if (result == FileChooser.Result.Approve) Some(chooser.selectedFile) else None
   }
 
-  def rechercheSipCommune(comm: String, reglesCommunes: List[List[String]]): Option[String] = {
-    var iCommune = 0
-    do {
-      val communeTable = tableCommunes.get(comm.replaceFirst(reglesCommunes(iCommune).head,reglesCommunes(iCommune)(1)))
-      if(communeTable.isDefined){
-        return communeTable
-      } else {
-        iCommune += 1
-      }
-    } while (iCommune < reglesCommunes.size)
+  def recherche(listeChaine: List[String],
+                          reglesObjet: List[List[String]],
+                          table: Map[String,Any]): Option[Any] = {
+    for(regle<-reglesObjet){
+      val retour = table.get(listeChaine.head.replaceFirst(regle.head,regle(1)))
+      if(retour.isDefined) return retour
+    }
     None
   }
 
-  def rechercheSipVoie(voie: String, reglesVoies: List[List[String]]): Option[List[(String,Stream[Int])]] = {
-    var iVoie = 0
-    do {
-      val rueTable = tableRues.get(voie.replaceFirst(reglesVoies(iVoie).head,reglesVoies(iVoie)(1)))
-      if(rueTable.isDefined){
-        return rueTable
-      } else {
-        iVoie += 1
-      }
-    } while (iVoie < reglesVoies.size)
+  def rechercheNumeroVoie(listeChaine: List[String],
+                          reglesNumeros: List[List[String]],
+                          table: Map[String,Any]): Option[Any] = {
+    val modele = """(\d+)""".r
+    var numeroRueC = ""
+    listeChaine(0) match {
+      case modele(nbc) => return Some(nbc.toInt)
+    }
+    for(regle<-reglesNumeros){
+      if(listeChaine(1).matches(regle.head))
+        if(regle(1) == "") return None
+        else return Some(regle(1).toInt)
+    }
     None
   }
 
-  def nouvelleRegle(objet: String,
-                           nom: String,
-                           regles: List[List[Any]],
-                           recherche: (String, List[List[String]]) => Option[String]) : (Option[Any],List[List[Any]]) = {
+  def nouvelleRegle(objet: String, listeChaine: List[String], regles: List[List[String]],
+                    table: Map[String,Any],
+                    recherche: (List[String], List[List[String]], Map[String,Any]) => Option[Any]):
+                    (Option[Any],List[List[String]]) = {
     var retour: Option[String] = None
     var nouvellesRegles = regles
     do {
-      retour = Dialog.showInput(null, nom, "Saisie d'une règle "+objet, Message.Plain,
-        Swing.EmptyIcon, Nil, nom + "|")
+      retour = Dialog.showInput(null, listeChaine.head, "Saisie d'une règle "+objet, Message.Plain,
+        Swing.EmptyIcon, Nil, listeChaine.head + "|")
       if (retour.isDefined) {
         var tableChaines = retour.get.split('|')
         if(tableChaines.length == 1) tableChaines = Array(tableChaines.head,"")
         if (tableChaines.length == 2) {
-          val sipCommune = recherche(nom, List(tableChaines.toList))
-          if (sipCommune.isDefined) {
+          val resultat = recherche(listeChaine, List(tableChaines.toList),table)
+          if (resultat.isDefined) {
             retour = None
             nouvellesRegles = nouvellesRegles :+ tableChaines.toList
             writerRegles.writeRow(List(objet, tableChaines(0), tableChaines(1)))
             writerRegles.flush()
-            return(sipCommune,nouvellesRegles)
+            return(resultat,nouvellesRegles)
           }
         }
       }
     } while (retour.isDefined)
     (None,nouvellesRegles)
   }
-  // lecture des paramètre
 
+  // lecture des paramètre
 
   var listeFichiers = List[String]()
   val fichierParam = "bailleur.par"
@@ -117,13 +130,8 @@ object bailleurApp extends App {
 
   // initialisation du fichier du bailleur
 
-  val fichierBailleur = if(listeFichiers.isEmpty)
-    choosePlainFile("Fichier du bailleur")
-  else
-    Some(new File(listeFichiers.head))
-  if(fichierBailleur.isEmpty) System.exit(-1)
-  val readerBailleur = CSVReader.open(fichierBailleur.get)
-  val bailleur = readerBailleur.all()
+  var retour = litFichier(0,"du Bailleur")
+  val (bailleur, fichierBailleur) = (retour._1, retour._2)
   val bailleurBuf = for(ligne<-bailleur) yield ligne.to[ListBuffer]
   val indexCommuneBailleur = bailleurBuf.head.indexOf("COMMUNE")
   if(indexCommuneBailleur < 0) {
@@ -143,43 +151,33 @@ object bailleurApp extends App {
 
   // initialisation du fichier des communes
 
-  val fichierCommunes = if(listeFichiers.isEmpty)
-    choosePlainFile("Fichier des communes")
-  else
-    Some(new File(listeFichiers(1)))
-  if(fichierCommunes.isEmpty) System.exit(-1)
-  val readerCommunes = CSVReader.open(fichierCommunes.get)
-  val communes = readerCommunes.all()
+  retour = litFichier(1,"des Communes")
+  val (communes, fichierCommunes) = (retour._1, retour._2)
   val indexCommuneCommunes = communes.head.indexOf("COMMUNE")
   val indexSipCommunes = communes.head.indexOf("Service des Impôts des Particuliers (SIP)")
   val tableCommunes = (for(c<-communes) yield c(indexCommuneCommunes) -> c(indexSipCommunes)).tail.toMap
 
   // initialisation du fichier des rues du chef-lieu
 
-  val fichierRues = if(listeFichiers.isEmpty)
-    choosePlainFile("Fichier des rues du chef-lieu")
-  else
-    Some(new File(listeFichiers(2)))
-  if(fichierRues.isEmpty) System.exit(-1)
-  val readerRuesToulouse = CSVReader.open(fichierRues.get)
-  val rues = readerRuesToulouse.all()
-  var tableRues: scala.collection.mutable.Map[String, List[(String,Stream[Int])]] = _
+  retour = litFichier(2,"des Rues du chef-lieu")
+  val (rue, fichierRues) = (retour._1, retour._2)
+  var tableRuesM = mutable.Map[String, List[(String,Stream[Int])]]()
   for(i<- 1 until rues.size) {
     val rue = rues(i)(1).nomVoie
-    if(tableRues == null) {
-      tableRues = scala.collection.mutable.Map(rue._1 -> List((rues(i)(2),rue._2)))
-    } else if (tableRues.contains(rue._1)) {
-      tableRues(rue._1) ::= (rues(i)(2),rue._2)
+    if(tableRuesM.get(rue._1).isEmpty) {
+      tableRuesM(rue._1) = List((rues(i)(2),rue._2))
     } else {
-      tableRues(rue._1) = List((rues(i)(2),rue._2))
+      tableRuesM(rue._1) ::= (rues(i)(2),rue._2)
     }
   }
+  val tableRues = tableRuesM.toMap
 
   if(listeFichiers.isEmpty){
     val pw = new PrintWriter("bailleur.par")
     pw.write(fichierBailleur.get.getPath+"\n"+fichierCommunes.get.getPath+"\n"+fichierRues.get.getPath)
     pw.close()
   }
+
   // initialisation du fichier des régles de remplacement
 
   val nomFichierRegles = fichierBailleur.get.getPath.replace(".csv","_regles.csv")
@@ -200,64 +198,54 @@ object bailleurApp extends App {
     writerRegles.writeRow(List("COLONNE","VALEUR BAILLEUR","VALEUR REFERENTIEL"))
     writerRegles.flush()
   }
+
+  // Traitement du fichier des bailleurs
+
   for(i <- 1 until bailleurBuf.size) {
     val commune = bailleurBuf(i)(indexCommuneBailleur).toUpperCase()
-    var sipCommune = rechercheSipCommune(commune, reglesCommunes)
+    var sipCommune = recherche(List(commune), reglesCommunes, tableCommunes).asInstanceOf[Option[String]]
     if(sipCommune.isEmpty) {
-      val retour = nouvelleRegle("COMMUNE",commune,reglesCommunes,rechercheSipCommune)
+      val retour = nouvelleRegle("COMMUNE",List(commune), reglesCommunes, tableCommunes, recherche)
       sipCommune = retour._1.asInstanceOf[Option[String]]
-      reglesCommunes = retour._2.asInstanceOf[List[List[String]]]
+      reglesCommunes = retour._2
     }
     if(sipCommune.isEmpty) bailleurBuf(i) += "communeInconnue"
     else if (!sipCommune.get.contains("voir")) bailleurBuf(i) += sipCommune.get
     else {
       val ruechaine = bailleurBuf(i)(indexVoie).replaceAll("é","e").replaceAll("è","e").replaceAll("ç","c").toUpperCase
-      var sipVoie = rechercheSipVoie(ruechaine, reglesVoies)
+      var sipVoie = recherche(List(ruechaine), reglesVoies, tableRues).asInstanceOf[Option[List[(String,Stream[Int])]]]
       if(sipVoie.isEmpty) {
-        var retour: Option[String] = None
-        do {
-          retour = Dialog.showInput(null, commune, "Saisie d'une règle VOIE", Message.Plain,
-            Swing.EmptyIcon, Nil, ruechaine + "|")
-          if (retour.isDefined) {
-            var tableChaines = retour.get.split('|')
-            if (tableChaines.length == 1) tableChaines = Array(tableChaines.head, "")
-            if (tableChaines.length == 2) {
-              sipVoie = rechercheSipVoie(ruechaine, List(tableChaines.toList))
-              if (sipVoie.isDefined) {
-                retour = None
-                reglesVoies = reglesVoies :+ tableChaines.toList
-                writerRegles.writeRow(List("VOIE", tableChaines(0), tableChaines(1)))
-                writerRegles.flush()
-              }
-            }
-          }
-        } while (retour.isDefined)
+        val retour = nouvelleRegle("VOIE", List(ruechaine), reglesVoies, tableRues, recherche)
+        sipVoie = retour._1.asInstanceOf[Option[List[(String,Stream[Int])]]]
+        reglesVoies = retour._2
       }
       if(sipVoie.isEmpty) bailleurBuf(i) += "voieInconnue"
       else if (sipVoie.get.size == 1) bailleurBuf(i) += sipVoie.get.head._1
       else {
-        val numeroRueC = bailleurBuf(i)(indexVoie - 1)
-        var numeroRue = if (numeroRueC.matches("""\d+""")) numeroRueC.toInt else 0
-        if(numeroRue == 0) {
-          var iNumero = 0
-          var numeroTrouve = false
-          do {
-            if (ruechaine.matches(reglesNumeros(iNumero).head)) {
-              numeroRue = reglesNumeros(iNumero)(1).toInt
-              numeroTrouve = true
-            } else iNumero += 1
-          } while (!numeroTrouve && iNumero < reglesNumeros.size)
+        var numeroChaine = bailleurBuf(i)(indexVoie-1)
+        var numeroVoie = rechercheNumeroVoie(List(numeroChaine, ruechaine), reglesNumeros, Map())
+        if(numeroVoie.isEmpty) {
+          val retour = nouvelleRegle("NUMERO", List(numeroChaine, ruechaine), reglesNumeros, Map(), rechercheNumeroVoie)
+          numeroVoie = retour._1.asInstanceOf[Option[Int]]
+          reglesNumeros = retour._2
         }
-        val rueRef = sipVoie.get
-        val rueRefs = rueRef.filter(_._2.contains(numeroRue))
-        if(rueRefs.isEmpty) {
+        if(numeroVoie.isEmpty) {
           bailleurBuf(i) += "aLaMain"
         } else {
-          bailleurBuf(i) += rueRefs.head._1
+          val rueRef = sipVoie.get
+          val rueRefs = rueRef.filter(_._2.contains(numeroVoie.get))
+          if (rueRefs.isEmpty) {
+            bailleurBuf(i) += "aLaMain"
+          } else {
+            bailleurBuf(i) += rueRefs.head._1
+          }
         }
       }
     }
   }
+
+  // écriture des fichiers éclatés
+
   val entete = bailleurBuf.head
   val indexSipBailleur = entete.indexOf("SIP")
   val corps = bailleurBuf.tail.sortWith(_ (indexSipBailleur)< _(indexSipBailleur))
@@ -279,6 +267,9 @@ object bailleurApp extends App {
     writerBailleur.writeRow(ligne)
   }
   writerBailleur.close()
+
+  // suppression des fichiers d'erreurs s'il n'y en a pas
+
   if (supprimerALaMain) new File("bailleur_complete_aLaMain.csv").delete()
   if (supprimerCommuneInconnue) new File("bailleur_complete_communeInconnue.csv").delete()
   if (supprimerVoieInconnue) new File("bailleur_complete_voieInconnue.csv").delete()
