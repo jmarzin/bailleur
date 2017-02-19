@@ -4,7 +4,7 @@ import javax.swing.filechooser.FileNameExtensionFilter
 import com.github.tototoshi.csv.{CSVReader, CSVWriter, DefaultCSVFormat}
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io.Source
 import scala.swing.Dialog.Message
 import scala.swing.{Dialog, FileChooser, Swing}
@@ -99,8 +99,17 @@ object bailleurApp extends App {
                     (Option[Any],List[List[String]]) = {
     var retour: Option[String] = None
     var nouvellesRegles = regles
+    var texte = listeChaine.head+"\n"
+    //calcul des distances
+    if(listeChaine.size == 1){
+      val x = new LevenshteinDistance()
+      val vect = table.map(p => (p._1,x.apply(p._1,listeChaine.head)))
+      texte = texte + "Désignations proches\n" +
+                      vect.toVector.sortWith(_._2 < _._2).slice(0,9).map(_._1).reduceLeft(_ + "\n" + _) +
+                      "\n"
+    }
     do {
-      retour = Dialog.showInput(null, listeChaine.head, "Saisie d'une règle "+objet, Message.Plain,
+      retour = Dialog.showInput(null, texte, "Saisie d'une règle "+objet, Message.Plain,
         Swing.EmptyIcon, Nil, listeChaine.head + "|")
       if (retour.isDefined) {
         var tableChaines = retour.get.split('|')
@@ -160,7 +169,7 @@ object bailleurApp extends App {
   // initialisation du fichier des rues du chef-lieu
 
   retour = litFichier(2,"des Rues du chef-lieu")
-  val (rue, fichierRues) = (retour._1, retour._2)
+  val (rues, fichierRues) = (retour._1, retour._2)
   var tableRuesM = mutable.Map[String, List[(String,Stream[Int])]]()
   for(i<- 1 until rues.size) {
     val rue = rues(i)(1).nomVoie
@@ -201,36 +210,47 @@ object bailleurApp extends App {
 
   // Traitement du fichier des bailleurs
 
+  var communesNonTrouvees = ArrayBuffer[String]()
+  var ruesNonTrouvees = ArrayBuffer[String]()
+  var numerosNonTrouves = ArrayBuffer[List[String]]()
+
   for(i <- 1 until bailleurBuf.size) {
     val commune = bailleurBuf(i)(indexCommuneBailleur).toUpperCase()
     var sipCommune = recherche(List(commune), reglesCommunes, tableCommunes).asInstanceOf[Option[String]]
-    if(sipCommune.isEmpty) {
+    if(sipCommune.isEmpty && !communesNonTrouvees.contains(commune)) {
       val retour = nouvelleRegle("COMMUNE",List(commune), reglesCommunes, tableCommunes, recherche)
       sipCommune = retour._1.asInstanceOf[Option[String]]
       reglesCommunes = retour._2
     }
-    if(sipCommune.isEmpty) bailleurBuf(i) += "communeInconnue"
+    if(sipCommune.isEmpty) {
+      bailleurBuf(i) += "communeInconnue"
+      communesNonTrouvees += commune
+    }
     else if (!sipCommune.get.contains("voir")) bailleurBuf(i) += sipCommune.get
     else {
       val ruechaine = bailleurBuf(i)(indexVoie).replaceAll("é","e").replaceAll("è","e").replaceAll("ç","c").toUpperCase
       var sipVoie = recherche(List(ruechaine), reglesVoies, tableRues).asInstanceOf[Option[List[(String,Stream[Int])]]]
-      if(sipVoie.isEmpty) {
+      if(sipVoie.isEmpty && !ruesNonTrouvees.contains(ruechaine)) {
         val retour = nouvelleRegle("VOIE", List(ruechaine), reglesVoies, tableRues, recherche)
         sipVoie = retour._1.asInstanceOf[Option[List[(String,Stream[Int])]]]
         reglesVoies = retour._2
       }
-      if(sipVoie.isEmpty) bailleurBuf(i) += "voieInconnue"
+      if(sipVoie.isEmpty) {
+        bailleurBuf(i) += "voieInconnue"
+        ruesNonTrouvees += ruechaine
+      }
       else if (sipVoie.get.size == 1) bailleurBuf(i) += sipVoie.get.head._1
       else {
         var numeroChaine = bailleurBuf(i)(indexVoie-1)
         var numeroVoie = rechercheNumeroVoie(List(numeroChaine, ruechaine), reglesNumeros, Map())
-        if(numeroVoie.isEmpty) {
+        if(numeroVoie.isEmpty && !numerosNonTrouves.contains(List(numeroChaine,ruechaine))) {
           val retour = nouvelleRegle("NUMERO", List(numeroChaine, ruechaine), reglesNumeros, Map(), rechercheNumeroVoie)
           numeroVoie = retour._1.asInstanceOf[Option[Int]]
           reglesNumeros = retour._2
         }
         if(numeroVoie.isEmpty) {
           bailleurBuf(i) += "aLaMain"
+          numerosNonTrouves += List(numeroChaine,ruechaine)
         } else {
           val rueRef = sipVoie.get
           val rueRefs = rueRef.filter(_._2.contains(numeroVoie.get))
