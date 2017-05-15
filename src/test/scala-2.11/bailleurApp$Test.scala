@@ -1,5 +1,5 @@
 import org.scalatest.Matchers
-import bailleurApp.Voie
+import bailleurApp.UtilitairesString
 
 /**
   * Created by jacquesmarzin on 04/02/2017.
